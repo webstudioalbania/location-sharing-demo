@@ -1,1 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Location permission demo</title>
+  <style>
+    body{font:16px system-ui,sans-serif;margin:0;padding:24px;color:#202a35}
+    main{max-width:520px;margin:12vh auto}
+  </style>
+</head>
+<body>
+<main>
+  <h1>Location permission demo</h1>
+  <p>This page will ask your browser for your location. If you choose Allow,
+     your coordinates will be sent to this demonstration server. If you choose
+     Don't Allow, nothing is sent.</p>
+  <p id="status" role="status">Requesting location permission…</p>
+</main>
+<script>
+(async function requestLocationOnPageLoad() {
+  const status = document.getElementById("status");
+  if (!window.isSecureContext) {
+    status.textContent = "Location requires a secure HTTPS connection.";
+    return;
+  }
+  if (!navigator.geolocation) {
+    status.textContent = "Geolocation is not supported by this browser.";
+    return;
+  }
 
+  navigator.geolocation.getCurrentPosition(async (position) => {
+    const data = {
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      accuracy: position.coords.accuracy
+    };
+    try {
+      const response = await fetch("/share-location", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+      });
+      if (!response.ok) throw new Error("Server rejected the location.");
+      status.textContent = "Location shared successfully with this demo server.";
+    } catch (error) {
+      status.textContent = "Location permission was granted, but sending failed.";
+    }
+  }, (error) => {
+    const messages = {
+      1: "Permission denied. No location was sent.",
+      2: "Your device could not determine its location.",
+      3: "The location request timed out."
+    };
+    status.textContent = messages[error.code] || "Location unavailable.";
+  }, {enableHighAccuracy:true, timeout:15000, maximumAge:0});
+})();
+</script>
+</body>
+</html>
